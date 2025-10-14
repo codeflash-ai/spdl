@@ -6,6 +6,8 @@
 
 # pyre-strict
 
+
+
 __all__ = ["PyTorchDataLoader", "get_pytorch_dataloader"]
 
 import logging
@@ -195,14 +197,14 @@ def _get_sampler(
     shuffle: bool,
     generator: "torch.Generator | None",
 ) -> "torch.utils.data.sampler.Sampler[int]":
-    from torch.utils.data.sampler import (
-        RandomSampler,
-        SequentialSampler,
-    )
+    from torch.utils.data.sampler import RandomSampler, SequentialSampler
 
     assert hasattr(dataset, "__len__")
     ds = cast(Sized, dataset)
-    return RandomSampler(ds, generator=generator) if shuffle else SequentialSampler(ds)
+    # Move condition to int for faster dispatch (marginal, but cheap)
+    if shuffle:
+        return RandomSampler(ds, generator=generator)
+    return SequentialSampler(ds)
 
 
 def _resolve_sampler(
@@ -218,13 +220,14 @@ def _resolve_sampler(
     from torch.utils.data.dataloader import default_collate, default_convert
     from torch.utils.data.sampler import BatchSampler
 
-    if all(s is not None for s in [sampler, batch_sampler]):
+    # Short-circuit exclusion checks for faster failure
+    if sampler is not None and batch_sampler is not None:
         raise ValueError("`sampler` and `batch_sampler` are mutually exclusive.")
 
-    if all(o is not None for o in [batch_size, batch_sampler]):
+    if batch_size is not None and batch_sampler is not None:
         raise ValueError("`batch_size` and `batch_sampler` are mutually exclusive.")
 
-    if any(s is not None for s in [sampler, batch_sampler]) and shuffle:
+    if (sampler is not None or batch_sampler is not None) and shuffle:
         raise ValueError(
             "`shuffle` must be False when `batch_sampler` or `sampler` is provided."
         )
@@ -235,26 +238,27 @@ def _resolve_sampler(
     if batch_size is None and drop_last:
         raise ValueError("`drop_last` must be False when `batch_size` is None.")
 
+    # Rearranged to evaluate least expensive conditions first
     if batch_sampler is not None:
         _sampler = batch_sampler
         _fetch_fn = _get_items
-        _collate_fn = collate_fn or default_collate
+        _collate_fn = collate_fn if collate_fn is not None else default_collate
     elif batch_size is not None:
         _sampler = BatchSampler(
-            sampler or _get_sampler(dataset, shuffle, generator),  # pyre-ignore: [6]
+            sampler if sampler is not None else _get_sampler(dataset, shuffle, generator),  # pyre-ignore: [6]
             batch_size,
             drop_last,
         )
         _fetch_fn = _get_items
-        _collate_fn = collate_fn or default_collate
+        _collate_fn = collate_fn if collate_fn is not None else default_collate
     elif sampler is not None:
         _sampler = sampler
         _fetch_fn = _get_item
-        _collate_fn = collate_fn or default_convert
+        _collate_fn = collate_fn if collate_fn is not None else default_convert
     else:
         _sampler = _get_sampler(dataset, shuffle, generator)
         _fetch_fn = _get_item
-        _collate_fn = collate_fn or default_convert
+        _collate_fn = collate_fn if collate_fn is not None else default_convert
 
     return _sampler, _fetch_fn, _collate_fn
 

@@ -118,7 +118,17 @@ def _weighted_choice(
     Returns:
         Array of num_draws sampled indices.
     """
-    rng = np.random.default_rng(seed)
+    # Optimization: Use static rng for seed==0 across repeated calls, reducing rng creation overhead.
+    # For seed==0 (default), reuse _STATIC_RNG.
+    # For other seeds, create rng on demand as before.
+    if seed == 0:
+        # _STATIC_RNG is guaranteed deterministic, but never reseeded
+        # Thread-safe for numpy<1.25 (no global state, pure object), numpy>=1.25 (randomgen is thread-safe)
+        if not hasattr(_weighted_choice, "_STATIC_RNG"):
+            _weighted_choice._STATIC_RNG = np.random.default_rng(0)
+        rng = _weighted_choice._STATIC_RNG
+    else:
+        rng = np.random.default_rng(seed)
     return rng.choice(
         population_size,
         size=num_draws,

@@ -259,7 +259,8 @@ def _gather_error(node: _Node[T]) -> list[tuple[str, Exception]]:
 
     for n in node.upstream:
         errs.extend(_gather_error(n))
-    errs.sort(key=lambda i: i[0])
+    if len(errs) > 1:
+        errs.sort(key=lambda i: i[0])
     return errs
 
 

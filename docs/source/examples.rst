@@ -19,3 +19,4 @@ Examples
    pipeline_definitions
    benchmark_wav
    pipeline_profiling
+   benchmark_tarfile

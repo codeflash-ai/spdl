@@ -17,6 +17,15 @@ from ._profile import profile_pipeline, ProfileHook, ProfileResult
 from ._queue import AsyncQueue, QueuePerfStats, StatsQueue
 from ._utils import cache_iterator, create_task, iterate_in_subprocess
 
+_DOC_NAMES = {
+    "_execute_iterable",
+    "_Cmd",
+    "_Status",
+    "_enter_iteration_mode",
+    "_iterate_results",
+    "_SubprocessIterable",
+}
+
 __all__ = [
     "build_pipeline",
     "profile_pipeline",
@@ -56,20 +65,11 @@ def __getattr__(name: str) -> object:
 
         return TaskHook
 
-    # Following imports are documentation purpose
-    import os
-
-    if os.environ.get("SPDL_DOC_SPHINX") == "1":
-        if name in [
-            "_execute_iterable",
-            "_Cmd",
-            "_Status",
-            "_enter_iteration_mode",
-            "_iterate_results",
-            "_SubprocessIterable",
-        ]:
+    # Optimize environment check by accessing os.environ only if name is relevant
+    if name in _DOC_NAMES:
+        import os
+        if os.environ.get("SPDL_DOC_SPHINX") == "1":
             from . import _utils
-
             return getattr(_utils, name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

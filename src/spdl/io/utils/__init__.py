@@ -24,8 +24,14 @@ def __dir__() -> list[str]:
 
 
 def __getattr__(name: str):
-    for mod in _mods:
-        if name in mod.__all__:
-            return getattr(mod, name)
-
+    mapping = getattr(__getattr__, "__mod_attr_map", None)
+    if mapping is None:
+        mapping = {}
+        for mod in _mods:
+            for attr in mod.__all__:
+                if attr not in mapping:
+                    mapping[attr] = mod
+        setattr(__getattr__, "__mod_attr_map", mapping)
+    if name in mapping:
+        return getattr(mapping[name], name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

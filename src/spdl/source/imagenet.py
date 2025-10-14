@@ -16,6 +16,8 @@ from pathlib import Path
 from ._type import IterableWithShuffle
 from .local_directory import LocalDirectory
 
+_WNID_RE = re.compile(r"n\d{8}")
+
 # pyre-strict
 
 
@@ -64,7 +66,7 @@ def parse_wnid(s: str) -> str:
         (str): Wordnet ID if found otherwise an exception is raised.
             If the string contain multiple WordNet IDs, the first one is returned.
     """
-    if match := re.search(r"n\d{8}", s):
+    if match := _WNID_RE.search(s):
         return match.group(0)
     raise ValueError(f"The given string does not contain WNID: {s}")
 

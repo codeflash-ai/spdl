@@ -8,6 +8,9 @@
 
 from spdl.io.lib import _libspdl_cuda
 
+# Cache NVCODEC availability result to avoid costly repeated FFI calls
+_built_with_nvcodec: bool | None = None
+
 __all__ = [
     "built_with_cuda",
     "built_with_nvcodec",
@@ -35,9 +38,14 @@ def built_with_nvcodec() -> bool:
         True if SPDL is compiled with NVCODEC support and
         the related libraries are properly loaded.
     """
+    global _built_with_nvcodec
+    if _built_with_nvcodec is not None:
+        return _built_with_nvcodec
     try:
-        return _libspdl_cuda.built_with_nvcodec()
+        _built_with_nvcodec = _libspdl_cuda.built_with_nvcodec()
+        return _built_with_nvcodec
     except Exception:
+        _built_with_nvcodec = False
         return False
 
 

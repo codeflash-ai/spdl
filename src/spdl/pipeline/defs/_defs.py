@@ -9,7 +9,7 @@ from collections.abc import AsyncIterable, Callable, Iterable, Sequence
 from concurrent.futures import Executor
 from dataclasses import dataclass
 from enum import IntEnum
-from functools import partial
+from functools import lru_cache, partial
 from typing import Any, Generic, Protocol, runtime_checkable, TypeAlias, TypeVar
 
 from .._convert import Callables
@@ -430,6 +430,7 @@ def Aggregate(num_items: int, /, *, drop_last: bool = False) -> PipeConfig[Any, 
     )
 
 
+@lru_cache(maxsize=1)
 def Disaggregate() -> PipeConfig[Any, Any]:
     """Create a :py:class:`PipeConfig` object for disaggregation.
 

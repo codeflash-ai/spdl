@@ -518,16 +518,17 @@ def get_abuffer_desc(
     Returns
         The resulting ``abuffer`` filter expression.
     """
-    name = "abuffer" if label is None else f"abuffer@{label}"
-    args = ":".join(
-        [
-            f"time_base={codec.time_base[0]}/{codec.time_base[1]}",
-            f"sample_rate={codec.sample_rate}",
-            f"sample_fmt={sample_fmt or codec.sample_fmt}",
-            f"channel_layout={codec.channel_layout}",
-        ]
+    # Avoid unnecessary temporaries by using an f-string for all values
+    args = (
+        f"time_base={codec.time_base[0]}/{codec.time_base[1]}:"
+        f"sample_rate={codec.sample_rate}:"
+        f"sample_fmt={sample_fmt or codec.sample_fmt}:"
+        f"channel_layout={codec.channel_layout}"
     )
-    return f"{name}={args}"
+    if label is None:
+        return f"abuffer={args}"
+    else:
+        return f"abuffer@{label}={args}"
 
 
 def get_buffer_desc(

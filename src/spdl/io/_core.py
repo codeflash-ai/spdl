@@ -74,6 +74,8 @@ from spdl.io._internal.import_utils import lazy_import
 from . import _preprocessing
 from .lib import _libspdl, _libspdl_cuda
 
+pass
+
 __all__ = [
     # DEMUXING
     "Demuxer",

@@ -698,12 +698,17 @@ def sample_decode_video(
         raise ValueError("Frame indices must be non-empty.")
 
     num_packets = len(packets)
-    if any(not (0 <= i < num_packets) for i in indices):
-        raise IndexError(f"Frame index must be [0, {num_packets}).")
-    if sorted(indices) != indices:
-        raise ValueError("Frame indices must be sorted in ascending order.")
-    if len(set(indices)) != len(indices):
-        raise ValueError("Frame indices must be unique.")
+    seen = {}
+    last_index = None
+    for idx in indices:
+        if not (0 <= idx < num_packets):
+            raise IndexError(f"Frame index must be [0, {num_packets}).")
+        if last_index is not None and idx < last_index:
+            raise ValueError("Frame indices must be sorted in ascending order.")
+        if idx in seen:
+            raise ValueError("Frame indices must be unique.")
+        seen[idx] = True
+        last_index = idx
 
     if filter_desc == _FILTER_DESC_DEFAULT:
         filter_desc = _preprocessing.get_video_filter_desc()

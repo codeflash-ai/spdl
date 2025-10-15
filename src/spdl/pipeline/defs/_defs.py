@@ -371,16 +371,10 @@ def Pipe(
 
     _type = _PipeType.Pipe if output_order == "completion" else _PipeType.OrderedPipe
 
-    if isinstance(op, SupportsGetItem):
-        # Note, if op is list/dict/tuple with a lot of elements, then
-        # debug print on `_ProcessConfig` might produce extremely long string.
-        # So it is important to extract the __getitem__ before it is passed to
-        # `_ProcessConfig`.
-        op = op.__getitem__
-
-        # We could do the same for callable (__call__)
-        # but usually callable class name contains readable information, so
-        # we don't do that here. (it happens in to_async helper function)
+    # Use duck-typing for __getitem__ to avoid expensive isinstance(SupportsGetItem) check
+    getitem = getattr(op, "__getitem__", None)
+    if getitem is not None and callable(getitem):
+        op = getitem
 
     return PipeConfig(
         name=name or _get_op_name(op),

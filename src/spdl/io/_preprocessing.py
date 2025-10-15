@@ -571,12 +571,12 @@ def get_buffer_desc(
         The resulting ``buffer`` filter expression.
     """
     name = "buffer" if label is None else f"buffer@{label}"
-    args = ":".join(
-        [
-            f"video_size={codec.width}x{codec.height}",
-            f"pix_fmt={pix_fmt or codec.pix_fmt}",
-            f"time_base={codec.time_base[0]}/{codec.time_base[1]}",
-            f"pixel_aspect={codec.sample_aspect_ratio[0]}/{codec.sample_aspect_ratio[1]}",
-        ]
+    pix_fmt_val = pix_fmt if pix_fmt is not None else codec.pix_fmt
+    # Avoid function-call overhead in join by using an f-string directly
+    args = (
+        f"video_size={codec.width}x{codec.height}:"
+        f"pix_fmt={pix_fmt_val}:"
+        f"time_base={codec.time_base[0]}/{codec.time_base[1]}:"
+        f"pixel_aspect={codec.sample_aspect_ratio[0]}/{codec.sample_aspect_ratio[1]}"
     )
     return f"{name}={args}"

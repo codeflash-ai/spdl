@@ -31,7 +31,12 @@ __all__ = [
 
 
 def __dir__() -> list[str]:
-    return sorted(__all__)
+    # Avoid sorting on every call by computing once.
+    # __all__ is static, so it's safe to cache.
+    # Cache the sorted list on the function object.
+    if not hasattr(__dir__, "_sorted_all"):
+        __dir__._sorted_all = sorted(__all__)
+    return __dir__._sorted_all
 
 
 def __getattr__(name: str) -> ModuleType:

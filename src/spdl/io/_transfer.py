@@ -103,9 +103,13 @@ _THREAD_LOCAL = threading.local()
 
 
 def _get_trancfer_func() -> _DataTransfer:
+    if not hasattr(_THREAD_LOCAL, "_cached_device_count"):
+        _THREAD_LOCAL._cached_device_count = torch.cuda.device_count()
+    device_count = _THREAD_LOCAL._cached_device_count
+
     if not hasattr(_THREAD_LOCAL, "transfer"):
         local_rank = int(os.environ.get("LOCAL_RANK", "0"))
-        if local_rank >= torch.cuda.device_count():
+        if local_rank >= device_count:
             raise RuntimeError(
                 "The local rank is larger than the number of available GPUs."
             )

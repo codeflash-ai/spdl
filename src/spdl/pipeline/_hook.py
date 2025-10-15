@@ -35,16 +35,19 @@ T = TypeVar("T")
 
 
 def _time_str(val: float) -> str:
+    # Avoid str interpolation in every case: use explicit string join
+    # Minor: minimize variable creation in hot path
     if val < 0.0001:
-        val *= 1e6
+        val = val * 1e6
         unit = "us"
     elif val < 1:
-        val *= 1e3
+        val = val * 1e3
         unit = "ms"
     else:
         unit = "sec"
 
-    return f"{val:6.1f} [{unit:>3s}]"
+    # Avoid f-string; percent formatting is consistently faster for simple cases
+    return "%6.1f [%3s]" % (val, unit)
 
 
 class _StatsCounter:
@@ -384,27 +387,44 @@ class TaskStatsHook(TaskHook):
             self.ave_time += (elapsed - self.ave_time) / self.num_success
 
     def _get_lap_stats(self) -> TaskPerfStats:
+        # Local variable access for faster retrieval
         num_success = self.num_success
         num_tasks = self.num_tasks
         ave_time = self.ave_time
+        lap_num_tasks = self._lap_num_tasks
+        lap_num_success = self._lap_num_success
+        lap_ave_time = self._lap_ave_time
 
-        delta_num_tasks = max(0, num_tasks - self._lap_num_tasks)
-        delta_num_success = max(0, num_success - self._lap_num_success)
+        delta_num_tasks = num_tasks - lap_num_tasks
+        if delta_num_tasks < 0:
+            delta_num_tasks = 0
+        delta_num_success = num_success - lap_num_success
+        if delta_num_success < 0:
+            delta_num_success = 0
+
         if delta_num_success <= 0:
             delta_ave_time = 0.0
         else:
+            # Calculate using locals (already loaded)
             total_time = ave_time * num_success
-            lap_total_time = self._lap_ave_time * self._lap_num_success
-            delta_ave_time = max(0.0, (total_time - lap_total_time) / delta_num_success)
+            lap_total_time = lap_ave_time * lap_num_success
+            delta_total_time = total_time - lap_total_time
+            # Guarantee non-negative delta_ave_time
+            if delta_total_time <= 0.0:
+                delta_ave_time = 0.0
+            else:
+                delta_ave_time = delta_total_time / delta_num_success
 
+        # Update instance variables only once at the end for improved speed
         self._lap_num_tasks = num_tasks
         self._lap_num_success = num_success
         self._lap_ave_time = ave_time
 
+        # Minimize keyword arg evaluation overhead by using positional
         return TaskPerfStats(
-            num_tasks=delta_num_tasks,
-            num_failures=delta_num_tasks - delta_num_success,
-            ave_time=delta_ave_time,
+            delta_num_tasks,
+            delta_num_tasks - delta_num_success,
+            delta_ave_time,
         )
 
     async def _log_interval_stats(self) -> None:

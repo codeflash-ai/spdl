@@ -159,7 +159,10 @@ def _get_local_rank() -> int:
     # LOCAL_RANK env var is how device mappingis communicated between PyTorch and
     # external system, so it should be a stable way to check the device without
     # importing PyTorch.
-    return int(os.environ.get("LOCAL_RANK", "0"))
+    try:
+        return int(os.environ["LOCAL_RANK"])
+    except KeyError:
+        return 0
 
 
 def _profile_pipe(
